@@ -2,6 +2,15 @@
 
 This project computes and bins CMB lensing cross- and auto-spectra (phi–T and phi–phi) using FFP10 simulations.
 
+## Documentation Map
+
+Start here before editing or rerunning the analysis:
+
+- `docs/pipeline_overview.md` - high-level pipeline stages and scientific intent
+- `docs/parfiles_guide.md` - what the parfile variants represent
+- `docs/data_layout.md` - required input/output directory structure
+- `docs/clean_fork_workflow.md` - recommended Git workflow for maintaining a clean analysis branch
+
 ## Quick Start (Python 3.10 required)
 
 This project ships compiled extension artifacts built against CPython 3.10 (see `*.cpython-310-*.so`), so you must use Python 3.10.x.
@@ -20,6 +29,20 @@ python --version  # should report 3.10.x
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## Runtime Environment
+
+The code is expected to run under Python 3.10. On this system, `delens-env`
+is the currently known working environment. If you are using that environment:
+
+```bash
+source /home3/p283342/delens-env/bin/activate
+python --version
+```
+
+If you use a different environment, keep the Python version at 3.10.x and make
+sure the package set matches the requirements and any extra runtime packages you
+installed manually in `delens-env`.
 
 ## Dependencies
 
@@ -59,6 +82,15 @@ Meaning of variables:
 
 You can also export these as environment variables before running scripts instead of editing the file.
 
+Example cluster-style configuration:
+
+```bash
+export PLENS=/scratch/hb-CosmoGroup/Delensing/PLENS
+export INPUT=/scratch/hb-CosmoGroup/Delensing/INPUT
+export PARAMS=/home3/p283342/Delensing/clean-delensing/input
+export KFIELD=/scratch/hb-CosmoGroup/Delensing/KFIELD
+```
+
 ## Data Layout (expected)
 
 ```
@@ -77,15 +109,20 @@ You can also export these as environment variables before running scripts instea
 <PARAMS>/dcl_dat             # data power adjustment
 ```
 
+The scratch-oriented layout and the downloader workflow are documented in
+`docs/data_layout.md`.
+
 ## Running the Pipeline
 
 Generate spectra and intermediate products:
 ```bash
-source venv/bin/activate
+source /home3/p283342/delens-env/bin/activate
 python run_parfiles.py
 ```
 
-You can customize which "parameter set" to run by editing imports inside `run_parfiles.py` or the modules under `parfiles/`.
+You can customize which "parameter set" to run by editing imports inside
+`run_parfiles.py` or the modules under `parfiles/`. The current driver processes
+an explicit list of `(parfile, estimator)` pairs through `main()`.
 
 ## Notebooks
 
