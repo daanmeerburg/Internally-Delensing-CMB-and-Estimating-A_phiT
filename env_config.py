@@ -5,10 +5,13 @@ import os
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 # Default paths (override via existing environment variables if set)
-PLENS = os.environ.get('PLENS', '/mnt/d/THESIS/PLENS')
-INPUT = os.environ.get('INPUT', '/mnt/d/THESIS/SIMS')
+#
+# Keeping the defaults project-relative avoids silently pointing cluster runs to
+# stale machine-specific paths.
+PLENS = os.environ.get('PLENS', os.path.join(PROJECT_ROOT, 'THESIS', 'PLENS'))
+INPUT = os.environ.get('INPUT', os.path.join(PROJECT_ROOT, 'THESIS', 'SIMS'))
 PARAMS = os.environ.get('PARAMS', os.path.join(PROJECT_ROOT, 'input'))
-KFIELD = os.environ.get('KFIELD', '/mnt/d/THESIS/LENSING MAPS')
+KFIELD = os.environ.get('KFIELD', os.path.join(PROJECT_ROOT, 'THESIS', 'LENSING'))
 
 # Set the environment variables for the project
 os.environ['PLENS'] = PLENS

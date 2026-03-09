@@ -192,9 +192,9 @@ class library_phiT(object):
                     self.MF = self.qe_phi.get_sim_qlm_mf(kPhi, self.mc_sims_mf, lmax=lmax_qcl)
                 qlm_phi -= self.MF
 
-            # print("using ftl")
             tlm = utils.alm_copy(self.tmaps.get_sim_tmliklm(idx), lmax_qcl)
-            # hp.almxfl(tlm, self.ftl,inplace=True)
+            if np.ndim(self.ftl) > 0:
+                hp.almxfl(tlm, self.ftl[:lmax_qcl + 1], inplace=True)
 
             cl_x = hp.alm2cl(qlm_phi, alms2=tlm)
             cl_x /= self.fsky1234   # it's (1 / [(2L+1)*fsky]) sum_m [phi_{Lm} T_{Lm}^*]
@@ -223,5 +223,4 @@ class library_phiT(object):
                 stats_qcl.add(self.get_sim_qcl(kPhi, idx, lmax=lmax))
             pk.dump((stats_qcl, lmax), open(tfname, 'wb'), protocol=2)
         return pk.load(open(tfname, 'rb'))[0]
-
 

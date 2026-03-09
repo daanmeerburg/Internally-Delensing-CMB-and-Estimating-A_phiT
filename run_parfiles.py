@@ -11,16 +11,11 @@ Usage:
     python run_parfiles.py
 """
 
-import os
-from os.path import join as opj
 from tqdm import tqdm
-import numpy as np
 import parfiles.noNoise.parfile as par_len
-import parfiles.noNoise.parfile_delensed as par_del
 import parfiles.noNoise.parfile_delensed_qest as par_delMV
 import parfiles.noNoise.parfile_delensed_PolQEST as par_delPol
 import parfiles.Noise.parfile as parNoise_len
-import parfiles.Noise.parfile_delensed as parNoise_del
 import parfiles.Noise.parfile_delensed_qest as parNoise_delMV
 import parfiles.Noise.parfile_delensed_PolQEST as parNoise_delPol
 
@@ -41,24 +36,25 @@ list_par_estimators = [
     [parNoise_delPol, "ptt"],
 ]
 
-# Process each parameter file and estimator combination
-for (par, estimator) in list_par_estimators:
+def run_scenario(par, estimator):
+    print("WORKING ON %s parfile, with %s estimator" % (par.TEMP, estimator))
 
-    print("WORKING ON %s parfile, with %s estimator"%(par.TEMP, estimator))
+    for idx in tqdm(par.mc_sims_bias, desc=f"{estimator} bias qlms"):
+        par.qlms_dd.get_sim_qlm(estimator, idx)
 
-    # Generate simulated QLMs for each bias simulation
-    for i in tqdm(par.mc_sims_bias):
-
-        par.qlms_dd.get_sim_qlm(estimator, i)
-
-
-    # Compute the mean-field QLM map
     par.qlms_dd.get_sim_qlm_mf(estimator, par.mc_sims_mf_dd)
-    # Generate simulated QCLs for each variance simulation
-    for i in tqdm(par.mc_sims_var):
 
-        par.qcls_ss.get_sim_qcl(estimator, i)
-        par.qcls_dd.get_sim_qcl(estimator, i)
+    for idx in tqdm(par.mc_sims_var, desc=f"{estimator} variance qcls"):
+        par.qcls_ss.get_sim_qcl(estimator, idx)
+        par.qcls_dd.get_sim_qcl(estimator, idx)
 
-    # Get the Phi-T
     ffp10_binner_phiT(estimator, par, "agr2").get_cL_PHI_T()
+
+
+def main():
+    for par, estimator in list_par_estimators:
+        run_scenario(par, estimator)
+
+
+if __name__ == "__main__":
+    main()

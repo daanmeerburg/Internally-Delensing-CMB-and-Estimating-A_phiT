@@ -19,17 +19,10 @@ Usage:
 
 """
 
-import os
-os.environ['PLENS'] = "/mnt/d/THESIS/PLENS"
-os.environ['INPUT'] = "/mnt/d/THESIS/SIMS"
 import numpy as np
 import plancklens.bandpowers as bp
 from plancklens import utils
 import healpy as hp
-
-
-import os
-import numpy as np
 from plancklens import utils
 from plancklens.bandpowers import get_blbubc, ffp10_binner
 
@@ -57,7 +50,7 @@ class ffp10_binner_phiT:
 
         # Load from parfile
         clpt_fid = parfile.cl_unl['pt'][:lmax+1]
-        cltt_fid  = parfile.cl_unl['pt'][:lmax+1]
+        cltt_fid  = parfile.cl_unl['tt'][:lmax+1]
         nltt      = parfile.nl_TT[:lmax+1]
         R_L = parfile.qresp_dd.get_response(kphi, 'p')[:lmax+1]
         fsky = getattr(parfile.qcls_dd, 'fsky1234', 1.0)

@@ -87,13 +87,17 @@ class smica_dx12_custom:
     def hashdict(self):
         return {'cmbs':self.cmbs, 
                 'noise':self.noise, 
+                'data': self.data,
                 'libdir': self.libdir,
                 'delens': self.delens,
                 'include_noise': self.include_noise,
                 'dlm': self.dlm,
+                'klm': self.klm,
+                'kPhi': self.kPhi,
                 'lmax': self.lmax,
                 'nside': self.nside,
-                'sims_dcl': None if self.sims_dcl is None else self.sims_dcl.hashdict()}
+                'sims_dcl': None if self.sims_dcl is None else self.sims_dcl.hashdict(),
+                'plm_par': None if self.plm_par is None else getattr(self.plm_par, 'TEMP', repr(self.plm_par))}
 
     def get_dlm(self, idx):
 
@@ -510,5 +514,4 @@ class cmb_unl_ffp10:
 
         """
         return hp.read_alm(opj(os.environ["CFS"],'cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_unlensed_scl_cmb_000_tebplm_mc_%04d.fits'% idx), hdu=4)
-
 
