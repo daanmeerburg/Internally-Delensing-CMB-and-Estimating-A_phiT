@@ -32,13 +32,25 @@ For each `(parfile, estimator)` pair it does four broad steps:
 The parfile modules define the analysis scenario:
 
 - noisy vs no-noise
-- lensed vs internally delensed
+- lensed vs delensed with input `kappa` vs internally delensed
 - estimator choice
 - simulation libraries
 - filtering and response settings
 
 The `Noise/` and `noNoise/` directories correspond to whether instrumental
 noise is included in the simulated sky maps.
+
+The current thesis-style scenario matrix is:
+
+1. baseline lensed
+2. delensed with input `kappa`
+3. internally delensed with MV-QEST
+4. internally delensed with Pol-QEST
+
+for each of:
+
+1. noiseless runs
+2. noisy runs
 
 ## Step 2: Simulation And Filtering Setup
 
@@ -103,6 +115,13 @@ Core operations:
 5. divide by `fsky`
 6. cache the result
 
+In the current notebooks, this stage is used to compare:
+
+- lensed baseline `C_L^{\phi T}`
+- ideal delensing using input `kappa`
+- internal delensing using reconstructed MV-QEST maps
+- internal delensing using the Pol-QEST branch
+
 ## Step 7: Response Correction And Binning
 
 `ffp10_binner_phiT` in `binner_sims.py` takes the raw `phi-T` spectrum and:
@@ -125,3 +144,6 @@ This code path corresponds most directly to the thesis sections discussing:
 
 In the clean fork, each pipeline stage should be annotated with references to
 the relevant thesis chapter or equation numbers.
+
+The scenario and estimator mapping is documented further in
+`docs/parfiles_guide.md`.
