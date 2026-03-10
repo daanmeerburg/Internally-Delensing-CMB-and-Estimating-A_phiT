@@ -9,6 +9,7 @@ Start here before editing or rerunning the analysis:
 - `docs/pipeline_overview.md` - high-level pipeline stages and scientific intent
 - `docs/parfiles_guide.md` - what the parfile variants represent
 - `docs/data_layout.md` - required input/output directory structure
+- `docs/thesis_outputs_map.md` - which notebooks and thesis outputs use which scenarios
 - `docs/clean_fork_workflow.md` - recommended Git workflow for maintaining a clean analysis branch
 
 ## Quick Start (Python 3.10 required)
