@@ -1,11 +1,23 @@
 """
 run_parfiles.py
 
-This script processes different parameter configurations and estimators to:
- 1. Generate simulated quadratic lensing maps (QLMs) for each bias simulation.
- 2. Compute the mean-field QLM map.
- 3. Generate simulated power spectra (QCLs) for each variance simulation.
- 4. Compute the binned Phi-T cross-spectrum using ffp10_binner_phiT.
+This script processes the main thesis analysis scenarios by:
+ 1. Generating simulated quadratic lensing maps (QLMs) for each bias simulation.
+ 2. Computing the mean-field QLM map.
+ 3. Generating simulated power spectra (QCLs) for each variance simulation.
+ 4. Computing the binned Phi-T cross-spectrum using ffp10_binner_phiT.
+
+Scenario matrix covered here:
+  - noNoise baseline lensed:                  estimator 'p'
+  - noNoise baseline polarization QE:         estimator 'p_p'
+  - noNoise delensed with input kappa:        estimator 'p'
+  - noNoise internally delensed MV-QEST:      estimator 'p'
+  - noNoise internally delensed Pol-QEST:     estimator 'ptt'
+  - Noise baseline lensed:                    estimator 'p'
+  - Noise baseline polarization QE:           estimator 'p_p'
+  - Noise delensed with input kappa:          estimator 'p'
+  - Noise internally delensed MV-QEST:        estimator 'p'
+  - Noise internally delensed Pol-QEST:       estimator 'ptt'
 
 Usage:
     python run_parfiles.py
@@ -13,9 +25,11 @@ Usage:
 
 from tqdm import tqdm
 import parfiles.noNoise.parfile as par_len
+import parfiles.noNoise.parfile_delensed as par_delInput
 import parfiles.noNoise.parfile_delensed_qest as par_delMV
 import parfiles.noNoise.parfile_delensed_PolQEST as par_delPol
 import parfiles.Noise.parfile as parNoise_len
+import parfiles.Noise.parfile_delensed as parNoise_delInput
 import parfiles.Noise.parfile_delensed_qest as parNoise_delMV
 import parfiles.Noise.parfile_delensed_PolQEST as parNoise_delPol
 
@@ -24,20 +38,24 @@ import parfiles.Noise.parfile_delensed_PolQEST as parNoise_delPol
 # estimator = "tt" # for temperature only
 from binner_sims import ffp10_binner_phiT
 
-# Define estimator modules and corresponding estimator suffixes to process
-list_par_estimators = [
-    [par_len, "p"],
-    [par_len, "p_p"],
-    [par_delMV, "p"],
-    [par_delPol, "ptt"],
-    [parNoise_len, "p"],
-    [parNoise_len, "p_p"],
-    [parNoise_delMV, "p"],
-    [parNoise_delPol, "ptt"],
+# Define the scenarios needed by the current notebooks and thesis figures.
+# Each entry is:
+#   (parfile_module, estimator_key, human_readable_label)
+SCENARIOS = [
+    (par_len, "p", "noNoise baseline lensed"),
+    (par_len, "p_p", "noNoise baseline polarization QE"),
+    (par_delInput, "p", "noNoise delensed with input kappa"),
+    (par_delMV, "p", "noNoise internally delensed MV-QEST"),
+    (par_delPol, "ptt", "noNoise internally delensed Pol-QEST"),
+    (parNoise_len, "p", "Noise baseline lensed"),
+    (parNoise_len, "p_p", "Noise baseline polarization QE"),
+    (parNoise_delInput, "p", "Noise delensed with input kappa"),
+    (parNoise_delMV, "p", "Noise internally delensed MV-QEST"),
+    (parNoise_delPol, "ptt", "Noise internally delensed Pol-QEST"),
 ]
 
-def run_scenario(par, estimator):
-    print("WORKING ON %s parfile, with %s estimator" % (par.TEMP, estimator))
+def run_scenario(par, estimator, label):
+    print(f"WORKING ON {label}: {par.TEMP} with estimator {estimator}")
 
     for idx in tqdm(par.mc_sims_bias, desc=f"{estimator} bias qlms"):
         par.qlms_dd.get_sim_qlm(estimator, idx)
@@ -52,8 +70,8 @@ def run_scenario(par, estimator):
 
 
 def main():
-    for par, estimator in list_par_estimators:
-        run_scenario(par, estimator)
+    for par, estimator, label in SCENARIOS:
+        run_scenario(par, estimator, label)
 
 
 if __name__ == "__main__":
