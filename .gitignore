@@ -9,3 +9,12 @@ venv/
 # Large FITS data (ignored)
 input/*/dat_klm.fits
 input/*/mf_klm.fits
+
+# Notebook and cache outputs
+.ipynb_checkpoints/
+THESIS/cache/
+THESIS/*.png
+
+# Runtime-generated build artifacts
+plancklens/**/__pycache__/
+plancklens/wigners/*.so.old

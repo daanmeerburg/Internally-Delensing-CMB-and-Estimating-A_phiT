@@ -60,11 +60,16 @@ Where:
 - `INPUT/` contains symlinks named exactly as the pipeline expects
 - `KFIELD/` contains `klm_%03d.fits` symlinks or files
 
-## Relationship To The Downloader
+## Relationship To Repository Helpers
 
-The standalone downloader script at:
+The repository expects the runtime directories in this layout to exist before
+notebook cache builders are run.
 
-`/home3/p283342/Delensing/download_planck_data.sh`
+After the simulation products are available, the repository helper scripts:
 
-was written to populate this layout directly for the CMB and noise simulation
-sets and to support configurable SMICA and lensing URLs.
+- `compute_pt_plot_data.py`
+- `compute_pp_plot_data.py`
+- `run_single_scenario.py`
+
+can be used together with their Slurm wrappers to generate notebook-ready cache
+products without modifying the raw input layout.

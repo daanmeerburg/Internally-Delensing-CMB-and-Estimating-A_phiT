@@ -10,14 +10,14 @@ Start here before editing or rerunning the analysis:
 - `docs/parfiles_guide.md` - what the parfile variants represent
 - `docs/data_layout.md` - required input/output directory structure
 - `docs/thesis_outputs_map.md` - which notebooks and thesis outputs use which scenarios
-- `docs/clean_fork_workflow.md` - recommended Git workflow for maintaining a clean analysis branch
+- `docs/clean_fork_workflow.md` - repository maintenance notes for keeping the pipeline reproducible
 
 ## Quick Start (Python 3.10 required)
 
 This project ships compiled extension artifacts built against CPython 3.10 (see `*.cpython-310-*.so`), so you must use Python 3.10.x.
 
 ```bash
-git clone https://github.com/gdijkman3-source/Internally-Delensing-CMB-and-Estimating-A_phiT.git
+git clone https://github.com/daanmeerburg/Internally-Delensing-CMB-and-Estimating-A_phiT.git
 cd Internally-Delensing-CMB-and-Estimating-A_phiT
 
 # Ensure a Python 3.10 interpreter is available (examples):

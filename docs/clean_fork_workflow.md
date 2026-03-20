@@ -1,75 +1,70 @@
-# Clean Fork Workflow
+# Repository Maintenance
 
-## Recommendation
+## Purpose
 
-Do not continue cleanup or documentation work in the current checkout of
-`Internally-Delensing-CMB-and-Estimating-A_phiT`. It contains an unresolved merge
-conflict and local runtime artifacts.
+This repository should now be treated as the primary standalone analysis fork.
+The goal is to keep it runnable without depending on an older dirty checkout or
+manual knowledge that only existed in the original development environment.
 
-Instead:
+## Working Rules
 
-1. Fork the upstream repository to your own GitHub account.
-2. Clone your fork into a fresh directory.
-3. Add the original repository as `upstream`.
-4. Re-apply only the changes you want to keep from the current dirty tree.
-5. Do documentation and cleanup work in a dedicated branch.
+1. Keep generated products out of Git.
+2. Keep pipeline code, notebook cache builders, and documentation in version control.
+3. Run expensive production steps through Slurm, not interactive shells.
+4. Treat the directories pointed to by `PLENS`, `INPUT`, `PARAMS`, and `KFIELD`
+   as runtime state, not repository state.
 
-## Suggested Repository Setup
+## Recommended Git Workflow
+
+For normal work in this fork:
 
 ```bash
-cd /home3/p283342/Delensing
+git checkout -b <feature-branch>
+# edit code or docs
+# run the relevant Slurm job or notebook smoke test
+git add <files>
+git commit -m "<message>"
+git push -u origin <feature-branch>
+```
 
-# After you create your fork on GitHub:
-git clone git@github.com:<your-user>/Internally-Delensing-CMB-and-Estimating-A_phiT.git clean-delensing
-cd clean-delensing
+If you still want to track the historical upstream repository, keep it only as a
+reference remote:
 
+```bash
 git remote add upstream https://github.com/gdijkman3-source/Internally-Delensing-CMB-and-Estimating-A_phiT.git
-git fetch upstream
-git checkout -b docs/pipeline-notes upstream/main
 ```
 
-If you prefer HTTPS:
+But the documentation in this fork should assume `origin` is the main working
+repository.
 
-```bash
-git clone https://github.com/<your-user>/Internally-Delensing-CMB-and-Estimating-A_phiT.git clean-delensing
-```
+## What Belongs In Git
 
-## What To Carry Over From The Current Tree
+Keep in Git:
 
-Carry over carefully:
+- analysis code under the repository root
+- `parfiles/`
+- `docs/`
+- notebook sources under `THESIS/`
+- Slurm wrappers and cache-building scripts
+- small configuration files such as `requirements.txt`
 
-- Any intentional changes to `env_config.py`
-- Any intentional changes to `run_parfiles.py`
-- Any scientific changes inside `parfiles/Noise/*.py`
-- Your runtime environment notes for `delens-env`
-- The new downloader script if you want it versioned
+Do not keep in Git:
 
-Do not carry over blindly:
-
+- `THESIS/cache/`
+- generated figures such as `THESIS/*.png`
 - `__pycache__/`
-- compiled `.so` changes unless you know why they changed
-- `Python-3.10.17/`
-- `Python-3.10.17.tar.xz`
-- generated output inside `THESIS/PLENS/`
-- unresolved merge markers or conflict state
+- rebuilt local binary artifacts unless you explicitly decide to version them
+- large runtime outputs written under `PLENS`
 
-## First Cleanup Commit Sequence
+## Reproducibility Notes
 
-Recommended commit order:
+A fresh clone should be made runnable by:
 
-1. `docs: add pipeline overview and data layout`
-2. `docs: explain parfile variants and estimators`
-3. `refactor: remove hardcoded environment paths`
-4. `refactor: wrap run_parfiles in a main entry point`
-5. `chore: update gitignore for caches and generated outputs`
+1. creating a Python 3.10 environment
+2. installing the requirements
+3. configuring `PLENS`, `INPUT`, `PARAMS`, and `KFIELD`
+4. building any required local binary extensions on the target cluster
+5. running the Slurm wrappers that generate pipeline outputs and notebook caches
 
-## Notes On `delens-env`
-
-If `delens-env` is the environment that actually runs the project, treat it as
-the current source of truth and record:
-
-- Python version
-- `pip freeze` or at least the manually installed extra packages
-- how `PLENS`, `INPUT`, `PARAMS`, and `KFIELD` are exported
-
-That information belongs in the clean fork README.
+The docs in this repository should describe those steps directly, without
+assuming access to an older checkout.
