@@ -63,6 +63,34 @@ pip install ipykernel notebook jupyterlab
 python -m ipykernel install --user --name cmb-lensing
 ```
 
+## Building Local Extensions
+
+This repository should not rely on cluster-specific compiled artifacts being
+tracked in Git. In particular, the `plancklens/wigners` extension should be
+built locally on the target machine or cluster.
+
+Example rebuild on the Hábrók cluster:
+
+```bash
+module load GCC/12.3.0
+source /home3/p283342/delens-env/bin/activate
+
+export TOOLCHAIN_BIN_GCC="$EBROOTGCCCORE/bin"
+export TOOLCHAIN_BIN_BINUTILS="$EBROOTBINUTILS/bin"
+export PATH="$TOOLCHAIN_BIN_GCC:$TOOLCHAIN_BIN_BINUTILS:$PATH"
+
+export CC="$TOOLCHAIN_BIN_GCC/gcc"
+export CXX="$TOOLCHAIN_BIN_GCC/g++"
+export FC="$TOOLCHAIN_BIN_GCC/gfortran"
+export F77="$FC"
+export F90="$FC"
+
+cd plancklens/wigners
+python -m numpy.f2py --fcompiler=gnu95 -c -m wigners wigners.f90
+```
+
+If you run on a different system, adapt the compiler and module setup accordingly.
+
 ## Environment Configuration
 
 Edit or create `env_config.py` to define paths (example values shown):

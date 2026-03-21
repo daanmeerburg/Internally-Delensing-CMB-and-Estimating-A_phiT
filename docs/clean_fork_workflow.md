@@ -65,6 +65,7 @@ A fresh clone should be made runnable by:
 3. configuring `PLENS`, `INPUT`, `PARAMS`, and `KFIELD`
 4. building any required local binary extensions on the target cluster
 5. running the Slurm wrappers that generate pipeline outputs and notebook caches
+6. building local binary extensions such as `plancklens/wigners` on the target system
 
 The docs in this repository should describe those steps directly, without
 assuming access to an older checkout.

@@ -18,3 +18,4 @@ THESIS/*.png
 # Runtime-generated build artifacts
 plancklens/**/__pycache__/
 plancklens/wigners/*.so.old
+plancklens/wigners/*.so
