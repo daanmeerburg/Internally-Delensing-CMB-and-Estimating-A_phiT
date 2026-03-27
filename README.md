@@ -37,7 +37,7 @@ The code is expected to run under Python 3.10. On this system, `delens-env`
 is the currently known working environment. If you are using that environment:
 
 ```bash
-source /home3/p283342/delens-env/bin/activate
+source /path/to/your/venv/bin/activate
 python --version
 ```
 
@@ -73,7 +73,7 @@ Example rebuild on the Hábrók cluster:
 
 ```bash
 module load GCC/12.3.0
-source /home3/p283342/delens-env/bin/activate
+source /path/to/your/venv/bin/activate
 
 export TOOLCHAIN_BIN_GCC="$EBROOTGCCCORE/bin"
 export TOOLCHAIN_BIN_BINUTILS="$EBROOTBINUTILS/bin"
@@ -114,10 +114,10 @@ You can also export these as environment variables before running scripts instea
 Example cluster-style configuration:
 
 ```bash
-export PLENS=/scratch/hb-CosmoGroup/Delensing/PLENS
-export INPUT=/scratch/hb-CosmoGroup/Delensing/INPUT
-export PARAMS=/home3/p283342/Delensing/clean-delensing/input
-export KFIELD=/scratch/hb-CosmoGroup/Delensing/KFIELD
+export PLENS=/path/to/your/runtime-root/PLENS
+export INPUT=/path/to/your/runtime-root/INPUT
+export PARAMS=/path/to/your/repo/input
+export KFIELD=/path/to/your/runtime-root/KFIELD
 ```
 
 ## Data Layout (expected)
@@ -145,7 +145,7 @@ The scratch-oriented layout and the downloader workflow are documented in
 
 Generate spectra and intermediate products:
 ```bash
-source /home3/p283342/delens-env/bin/activate
+source /path/to/your/venv/bin/activate
 python run_parfiles.py
 ```
 

@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="/home3/p283342/Delensing/clean-delensing/THESIS/cache/pp_results",
+        default=None,
         help="Directory where cached .npz files will be written.",
     )
     return parser.parse_args()
@@ -185,7 +185,8 @@ def save_efficiency_cases(output_dir: Path) -> None:
 
 def main() -> None:
     args = parse_args()
-    output_dir = Path(args.output_dir)
+    repo_root = Path(__file__).resolve().parent
+    output_dir = Path(args.output_dir) if args.output_dir else repo_root / "THESIS" / "cache" / "pp_results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.stage in ("all", "validation"):

@@ -42,10 +42,10 @@ The project uses four main path variables:
 ## Suggested Scratch Layout
 
 For the current cluster setup, a clean layout under
-`/scratch/hb-CosmoGroup/Delensing` is:
+`/path/to/your/runtime-root` is:
 
 ```text
-/scratch/hb-CosmoGroup/Delensing/
+/path/to/your/runtime-root/
   CMB/sims/raw/
   Noise/sims/raw/
   SMICA/mission/raw/
