@@ -14,6 +14,7 @@ input/*/mf_klm.fits
 .ipynb_checkpoints/
 THESIS/cache/
 THESIS/*.png
+THESIS/PLENS/
 
 # Runtime-generated build artifacts
 plancklens/**/__pycache__/

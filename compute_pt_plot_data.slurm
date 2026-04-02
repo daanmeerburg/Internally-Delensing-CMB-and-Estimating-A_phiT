@@ -36,11 +36,33 @@ export KFIELD="${KFIELD:-$RUNTIME_ROOT/KFIELD}"
 GROUP="${GROUP:-both}"
 BIN_TYPE="${BIN_TYPE:-fullA_10}"
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/THESIS/cache/pt_results}"
+SCENARIO="${SCENARIO:-}"
+FORCE="${FORCE:-0}"
+SCENARIO_LIST="${SCENARIO_LIST:-mv_lensed,mv_input_kappa,mv_internal_qest,tt_internal_polqest}"
+
+if [[ -z "${SCENARIO}" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  IFS=',' read -r -a _scenarios <<< "${SCENARIO_LIST}"
+  if (( SLURM_ARRAY_TASK_ID < 0 || SLURM_ARRAY_TASK_ID >= ${#_scenarios[@]} )); then
+    echo "SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} out of range for SCENARIO_LIST=${SCENARIO_LIST}" >&2
+    exit 1
+  fi
+  SCENARIO="${_scenarios[$SLURM_ARRAY_TASK_ID]}"
+  echo "Resolved array task ${SLURM_ARRAY_TASK_ID} -> scenario ${SCENARIO}"
+fi
 
 cd "$REPO_ROOT"
 mkdir -p "$REPO_ROOT/logs"
 
-python -u compute_pt_plot_data.py \
-  --group "${GROUP}" \
-  --bin-type "${BIN_TYPE}" \
+ARGS=(
+  --group "${GROUP}"
+  --bin-type "${BIN_TYPE}"
   --output-dir "${OUTPUT_DIR}"
+)
+if [[ -n "${SCENARIO}" ]]; then
+  ARGS+=(--scenario "${SCENARIO}")
+fi
+if [[ "${FORCE}" == "1" ]]; then
+  ARGS+=(--force)
+fi
+
+python -u compute_pt_plot_data.py "${ARGS[@]}"

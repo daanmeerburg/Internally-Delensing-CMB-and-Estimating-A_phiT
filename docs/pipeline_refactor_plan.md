@@ -54,6 +54,25 @@
 
 ## Immediate Next Steps
 1. Add cache/raw-file audit tooling (done in `scripts/audit_delensing_cache.py`).
-2. Split expensive cache builders into explicit stages and chunk runners.
+2. Split expensive cache builders into explicit stages and chunk runners (in progress).
 3. Add stage-level Slurm wrappers with dependency chaining.
 4. Enforce plotting-from-cache-only in notebooks/scripts.
+
+## Step 2 Implemented (This Branch)
+- `compute_pp_plot_data.py`:
+  - Added `--force`.
+  - Reuses existing noisy fiducial calibration cache when present (avoids repeating heavy baseline work on scenario reruns).
+  - Keeps scenario-level reruns idempotent by default.
+- `compute_pt_plot_data.py`:
+  - Added `--scenario` and `--force`.
+  - Scenario-level reruns now skip existing outputs by default.
+- Slurm wrappers:
+  - `compute_pp_plot_data.slurm` and `compute_pt_plot_data.slurm` now support array-index to scenario mapping via `SCENARIO_LIST` and `SLURM_ARRAY_TASK_ID`.
+
+### Array Submission Examples
+- PP noisy scenarios in parallel:
+  - `sbatch --array=0-3 --export=ALL,STAGE=clpp_noisy /home3/p283342/Delensing/clean-delensing/compute_pp_plot_data.slurm`
+- PT noisy scenarios in parallel:
+  - `sbatch --array=0-3 --export=ALL,GROUP=noisy /home3/p283342/Delensing/clean-delensing/compute_pt_plot_data.slurm`
+- Override scenario list/order:
+  - `--export=ALL,STAGE=clpp_noisy,SCENARIO_LIST=mv_lensed,mv_input_kappa,mv_internal_qest,tt_internal_polqest`
