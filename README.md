@@ -11,6 +11,7 @@ Start here before editing or rerunning the analysis:
 - `docs/data_layout.md` - required input/output directory structure
 - `docs/thesis_outputs_map.md` - which notebooks and thesis outputs use which scenarios
 - `docs/clean_fork_workflow.md` - repository maintenance notes for keeping the pipeline reproducible
+- `docs/cache_submission_workflow.md` - dependency-chained Slurm submission for PP/PT cache generation
 
 ## Quick Start (Python 3.10 required)
 

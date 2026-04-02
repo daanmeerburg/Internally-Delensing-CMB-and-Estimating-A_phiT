@@ -67,5 +67,14 @@ A fresh clone should be made runnable by:
 5. running the Slurm wrappers that generate pipeline outputs and notebook caches
 6. building local binary extensions such as `plancklens/wigners` on the target system
 
+For thesis cache generation with dependencies, prefer:
+
+```bash
+scripts/submit_thesis_cache_pipeline.sh \
+  --runtime-root /path/to/your/runtime-root \
+  --venv-activate /path/to/your/venv/bin/activate \
+  --pipeline both
+```
+
 The docs in this repository should describe those steps directly, without
 assuming access to an older checkout.

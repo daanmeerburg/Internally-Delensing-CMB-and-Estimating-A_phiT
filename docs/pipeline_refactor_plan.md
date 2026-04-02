@@ -55,7 +55,7 @@
 ## Immediate Next Steps
 1. Add cache/raw-file audit tooling (done in `scripts/audit_delensing_cache.py`).
 2. Split expensive cache builders into explicit stages and chunk runners (in progress).
-3. Add stage-level Slurm wrappers with dependency chaining.
+3. Add stage-level Slurm wrappers with dependency chaining (done with `scripts/submit_thesis_cache_pipeline.sh`).
 4. Enforce plotting-from-cache-only in notebooks/scripts.
 
 ## Step 2 Implemented (This Branch)
@@ -76,3 +76,14 @@
   - `sbatch --array=0-3 --export=ALL,GROUP=noisy /home3/p283342/Delensing/clean-delensing/compute_pt_plot_data.slurm`
 - Override scenario list/order:
   - `--export=ALL,STAGE=clpp_noisy,SCENARIO_LIST=mv_lensed,mv_input_kappa,mv_internal_qest,tt_internal_polqest`
+
+## Step 3 Implemented (This Branch)
+- Added `scripts/submit_thesis_cache_pipeline.sh` to submit dependency-chained PP/PT cache jobs.
+- Supports:
+  - `--pipeline pp|pt|both`
+  - resource tuning (`--partition`, `--time-*`, `--mem-*`)
+  - `--dry-run` preview mode
+- Uses:
+  - seed job (`mv_lensed`) to establish baseline outputs
+  - scenario arrays for remaining scenarios
+  - `afterok` dependency graph for deterministic ordering
