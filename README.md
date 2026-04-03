@@ -7,12 +7,30 @@ This project computes and bins CMB lensing cross- and auto-spectra (phi–T and 
 Start here before editing or rerunning the analysis:
 
 - `docs/pipeline_overview.md` - high-level pipeline stages and scientific intent
-- `docs/parfiles_guide.md` - what the parfile variants represent
-- `docs/data_layout.md` - required input/output directory structure
-- `docs/thesis_outputs_map.md` - which notebooks and thesis outputs use which scenarios
-- `docs/clean_fork_workflow.md` - repository maintenance notes for keeping the pipeline reproducible
+- `docs/parfiles_guide.md` - scenario/parfile/estimator mapping
+- `docs/data_layout.md` - required runtime directory structure
+- `docs/thesis_outputs_map.md` - notebook outputs and scenario matrix used for thesis figures
 - `docs/cache_submission_workflow.md` - dependency-chained Slurm submission for PP/PT cache generation
 - `docs/upstream_parallel_workflow.md` - chunked upstream scenario workflow (`qlms -> mf -> qcls -> phi_t`)
+- `docs/clean_fork_workflow.md` - repository hygiene and maintenance rules
+
+Archived planning notes:
+- `docs/archive/pipeline_refactor_plan.md`
+
+## Thesis Provenance
+
+This table links code outputs to the corresponding parts of the thesis.
+
+| Pipeline artifact | Notebook / script | Thesis reference |
+| --- | --- | --- |
+| `C_L^{\phi T}` noiseless and noisy comparison | `THESIS/PT_results.ipynb` | Theory: Section 2.6.3 (collapsed `C_L^{\phi T}`, Eqs. 52-54); Methods: Section 3.3.6 (phi-T spectrum estimation); Results: Section 4.2; Discussion: Section 5.2 |
+| `C_L^{\phi\phi}` noiseless and noisy comparison | `THESIS/PP_results.ipynb` | Theory: Section 2.5.3; Methods: Section 3.3.6 (power-spectrum estimation); Results: Section 4.1; Discussion: Section 5.1 |
+| Wiener filter vs delensing efficiency | `THESIS/PP_results.ipynb` and `compute_pp_plot_data.py` | Section 2.7.4 (Eqs. 63-67); Results: Figures 3, 6, 7 (Sections 4.1-4.2); Discussion: Sections 5.1-5.2 |
+| Scenario matrix (lensed, input-`kappa`, MV-QEST, Pol-QEST) | `parfiles/noNoise/*`, `parfiles/Noise/*` | Methods: Section 3.3.1 (Overview of Analysis Scenarios) and Sections 3.3.3-3.3.5 |
+| Amplitude summaries | `THESIS/Amplitude.ipynb` | Methods: Section 3.3.6 (phi-T amplitude fit); Results: Section 4.3; Discussion: Section 5.3 |
+
+The operational mapping of scenarios and estimators is documented in
+`docs/thesis_outputs_map.md`.
 
 ## Quick Start (Python 3.10 required)
 

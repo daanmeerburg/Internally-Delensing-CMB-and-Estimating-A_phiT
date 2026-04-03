@@ -6,6 +6,19 @@ This page maps the main thesis notebooks and figure-producing workflows to the
 parfiles and estimator keys they rely on. It is intended as an operational
 guide for rerunning or checking the analysis.
 
+## Thesis Reference Fields
+
+These references are taken from `THESIS Gilles Dijkman.pdf` in the parent
+`Delensing/` directory.
+
+| Analysis item | Thesis reference |
+| --- | --- |
+| CMB lensing reconstruction formalism | Section 2.7.1 (Hu-Okamoto QE), Section 2.7.2 (unbiased estimate), Section 2.7.3 (from `\hat{\phi}` to delensed maps) |
+| Internal delensing setup | Section 2.7.3 and Methods Section 3.3.3 (Delensing Procedure) |
+| `C_L^{\phi T}` estimator and interpretation | Section 2.6.3, Eqs. (52)-(54); efficiency relation in Section 2.7.4, Eq. (67); results in Section 4.2 and discussion in Section 5.2 |
+| `C_L^{\phi\phi}` validation / consistency checks | Methods Section 3.3.6; results in Section 4.1; discussion in Section 5.1; validation checks in Section 5.4 |
+| Definition of amplitude summary (e.g. `A_{\phi T}`) | Methods Section 3.3.6 (Phi-T Amplitude least-squares fit; unnumbered equations in that subsection), results in Section 4.3, discussion in Section 5.3 |
+
 ## Main Notebooks
 
 ### `THESIS/PT_results.ipynb`
