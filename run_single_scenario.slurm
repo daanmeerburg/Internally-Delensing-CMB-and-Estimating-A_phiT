@@ -26,7 +26,6 @@ export FC="$TOOLCHAIN_BIN_GCC/gfortran"
 export F77="$FC"
 export F90="$FC"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}"
 REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-/path/to/your/runtime-root}"

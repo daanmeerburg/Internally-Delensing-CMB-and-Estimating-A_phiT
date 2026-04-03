@@ -19,6 +19,8 @@ pp-cache_*.out
 pp-cache_*.err
 pt-cache_*.out
 pt-cache_*.err
+delens-test_*.out
+delens-test_*.err
 
 # Runtime-generated build artifacts
 plancklens/**/__pycache__/
