@@ -12,6 +12,7 @@ Start here before editing or rerunning the analysis:
 - `docs/thesis_outputs_map.md` - which notebooks and thesis outputs use which scenarios
 - `docs/clean_fork_workflow.md` - repository maintenance notes for keeping the pipeline reproducible
 - `docs/cache_submission_workflow.md` - dependency-chained Slurm submission for PP/PT cache generation
+- `docs/upstream_parallel_workflow.md` - chunked upstream scenario workflow (`qlms -> mf -> qcls -> phi_t`)
 
 ## Quick Start (Python 3.10 required)
 

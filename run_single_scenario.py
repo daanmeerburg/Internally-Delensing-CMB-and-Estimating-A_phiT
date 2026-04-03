@@ -6,6 +6,9 @@ Examples:
     python run_single_scenario.py --scenario 0
     python run_single_scenario.py --scenario 0 --bias-count 2 --var-count 5
     python run_single_scenario.py --scenario 5 --var-start 60 --var-count 10
+    python run_single_scenario.py --scenario 5 --stage qlms --bias-start 120 --bias-count 30
+    python run_single_scenario.py --scenario 5 --stage mf
+    python run_single_scenario.py --scenario 5 --stage qcls --var-start 120 --var-count 60
 """
 
 import argparse
@@ -49,6 +52,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--list", action="store_true", help="List available scenarios and exit.")
     parser.add_argument("--bias-count", type=int, default=None, help="Number of bias sims to run.")
     parser.add_argument(
+        "--bias-start",
+        type=int,
+        default=0,
+        help="Start index inside mc_sims_bias for the bias loop.",
+    )
+    parser.add_argument(
         "--var-start",
         type=int,
         default=None,
@@ -59,6 +68,17 @@ def parse_args() -> argparse.Namespace:
         "--skip-phi-t",
         action="store_true",
         help="Skip the final phi-T binning step. Useful for a very short smoke test.",
+    )
+    parser.add_argument(
+        "--stage",
+        choices=("all", "qlms", "mf", "qcls", "phi_t"),
+        default="all",
+        help="Run only a specific upstream stage.",
+    )
+    parser.add_argument(
+        "--mf-use-bias-slice",
+        action="store_true",
+        help="Use selected bias sims for mean-field instead of par.mc_sims_mf_dd.",
     )
     return parser.parse_args()
 
@@ -80,29 +100,40 @@ def run_scenario(
     par,
     estimator,
     label,
+    stage,
+    bias_start,
     bias_count,
     var_start,
     var_count,
     skip_phi_t,
+    mf_use_bias_slice,
 ) -> None:
-    bias_sims = take_slice(par.mc_sims_bias, 0, bias_count)
+    bias_sims = take_slice(par.mc_sims_bias, bias_start, bias_count)
     var_sims = take_slice(par.mc_sims_var, var_start, var_count)
+    mf_sims = list(bias_sims) if mf_use_bias_slice else list(par.mc_sims_mf_dd)
 
     print(f"WORKING ON {label}: {par.TEMP} with estimator {estimator}")
     print(f"bias sims: {bias_sims[0] if bias_sims else 'none'} -> {bias_sims[-1] if bias_sims else 'none'} ({len(bias_sims)})")
     print(f"var sims:  {var_sims[0] if var_sims else 'none'} -> {var_sims[-1] if var_sims else 'none'} ({len(var_sims)})")
+    print(f"mf sims:   {mf_sims[0] if mf_sims else 'none'} -> {mf_sims[-1] if mf_sims else 'none'} ({len(mf_sims)})")
+    print(f"stage: {stage}")
 
-    for idx in tqdm(bias_sims, desc=f"{estimator} bias qlms"):
-        par.qlms_dd.get_sim_qlm(estimator, idx)
+    if stage in ("all", "qlms"):
+        for idx in tqdm(bias_sims, desc=f"{estimator} bias qlms"):
+            par.qlms_dd.get_sim_qlm(estimator, idx)
 
-    if bias_sims:
-        par.qlms_dd.get_sim_qlm_mf(estimator, bias_sims)
+    if stage in ("all", "mf"):
+        if mf_sims:
+            par.qlms_dd.get_sim_qlm_mf(estimator, mf_sims)
+        else:
+            print("No mean-field sims selected; skipping MF computation.")
 
-    for idx in tqdm(var_sims, desc=f"{estimator} variance qcls"):
-        par.qcls_ss.get_sim_qcl(estimator, idx)
-        par.qcls_dd.get_sim_qcl(estimator, idx)
+    if stage in ("all", "qcls"):
+        for idx in tqdm(var_sims, desc=f"{estimator} variance qcls"):
+            par.qcls_ss.get_sim_qcl(estimator, idx)
+            par.qcls_dd.get_sim_qcl(estimator, idx)
 
-    if not skip_phi_t:
+    if stage in ("all", "phi_t") and not skip_phi_t:
         ffp10_binner_phiT(estimator, par, "agr2").get_cL_PHI_T(mc_sims=var_sims if var_sims else None)
 
 
@@ -120,10 +151,13 @@ def main() -> None:
         par,
         estimator,
         label,
+        args.stage,
+        args.bias_start,
         args.bias_count,
         args.var_start,
         args.var_count,
         args.skip_phi_t,
+        args.mf_use_bias_slice,
     )
 
 

@@ -27,6 +27,8 @@ export F77="$FC"
 export F90="$FC"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}"
+REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-/path/to/your/runtime-root}"
 export PLENS="${PLENS:-$RUNTIME_ROOT/PLENS}"
 export INPUT="${INPUT:-$RUNTIME_ROOT/INPUT}"
@@ -35,15 +37,31 @@ export KFIELD="${KFIELD:-$RUNTIME_ROOT/KFIELD}"
 
 SCENARIO="${SCENARIO:-0}"
 BIAS_COUNT="${BIAS_COUNT:-2}"
+BIAS_START="${BIAS_START:-0}"
 VAR_START="${VAR_START:-0}"
 VAR_COUNT="${VAR_COUNT:-5}"
 SKIP_PHI_T="${SKIP_PHI_T:-0}"
+STAGE="${STAGE:-all}"
+ARRAY_MODE="${ARRAY_MODE:-none}"  # none|bias|var
+VAR_BASE_START="${VAR_BASE_START:-0}"
+MF_USE_BIAS_SLICE="${MF_USE_BIAS_SLICE:-0}"
+
+if [[ "${ARRAY_MODE}" == "bias" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  BIAS_START=$(( SLURM_ARRAY_TASK_ID * BIAS_COUNT ))
+  echo "Resolved bias chunk: task ${SLURM_ARRAY_TASK_ID} -> bias_start ${BIAS_START}, bias_count ${BIAS_COUNT}"
+fi
+if [[ "${ARRAY_MODE}" == "var" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  VAR_START=$(( VAR_BASE_START + SLURM_ARRAY_TASK_ID * VAR_COUNT ))
+  echo "Resolved var chunk: task ${SLURM_ARRAY_TASK_ID} -> var_start ${VAR_START}, var_count ${VAR_COUNT}"
+fi
 
 cd "$REPO_ROOT"
 mkdir -p "$REPO_ROOT/logs"
 
 ARGS=(
   --scenario "${SCENARIO}"
+  --stage "${STAGE}"
+  --bias-start "${BIAS_START}"
   --bias-count "${BIAS_COUNT}"
   --var-start "${VAR_START}"
   --var-count "${VAR_COUNT}"
@@ -51,6 +69,9 @@ ARGS=(
 
 if [[ "${SKIP_PHI_T}" == "1" ]]; then
   ARGS+=(--skip-phi-t)
+fi
+if [[ "${MF_USE_BIAS_SLICE}" == "1" ]]; then
+  ARGS+=(--mf-use-bias-slice)
 fi
 
 python -u run_single_scenario.py "${ARGS[@]}"
