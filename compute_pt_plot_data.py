@@ -22,29 +22,33 @@ import numpy as np
 SCENARIO_SLUGS = ("mv_lensed", "mv_input_kappa", "mv_internal_qest", "tt_internal_polqest")
 
 
-def load_scenarios():
-    import parfiles.noNoise.parfile as par_nn
-    import parfiles.noNoise.parfile_delensed as par_nn_del
-    import parfiles.noNoise.parfile_delensed_qest as par_nn_qest
-    import parfiles.noNoise.parfile_delensed_PolQEST as par_nn_polq
-    import parfiles.Noise.parfile as par_n
-    import parfiles.Noise.parfile_delensed as par_n_del
-    import parfiles.Noise.parfile_delensed_qest as par_n_qest
-    import parfiles.Noise.parfile_delensed_PolQEST as par_n_polq
+def load_scenarios(groups):
+    ctx = {}
+    if "noiseless" in groups:
+        import parfiles.noNoise.parfile as par_nn
+        import parfiles.noNoise.parfile_delensed as par_nn_del
+        import parfiles.noNoise.parfile_delensed_qest as par_nn_qest
+        import parfiles.noNoise.parfile_delensed_PolQEST as par_nn_polq
 
-    noiseless = [
-        (par_nn, "MV: lensed", "p", "mv_lensed"),
-        (par_nn_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
-        (par_nn_qest, "MV: int. delensed with MV-QEST", "p", "mv_internal_qest"),
-        (par_nn_polq, "TT: int. delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
-    ]
-    noisy = [
-        (par_n, "MV: lensed", "p", "mv_lensed"),
-        (par_n_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
-        (par_n_qest, "MV: int. delensed with MV-QEST", "p", "mv_internal_qest"),
-        (par_n_polq, "TT: int. delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
-    ]
-    return {"noiseless": noiseless, "noisy": noisy}
+        ctx["noiseless"] = [
+            (par_nn, "MV: lensed", "p", "mv_lensed"),
+            (par_nn_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
+            (par_nn_qest, "MV: int. delensed with MV-QEST", "p", "mv_internal_qest"),
+            (par_nn_polq, "TT: int. delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
+        ]
+    if "noisy" in groups:
+        import parfiles.Noise.parfile as par_n
+        import parfiles.Noise.parfile_delensed as par_n_del
+        import parfiles.Noise.parfile_delensed_qest as par_n_qest
+        import parfiles.Noise.parfile_delensed_PolQEST as par_n_polq
+
+        ctx["noisy"] = [
+            (par_n, "MV: lensed", "p", "mv_lensed"),
+            (par_n_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
+            (par_n_qest, "MV: int. delensed with MV-QEST", "p", "mv_internal_qest"),
+            (par_n_polq, "TT: int. delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
+        ]
+    return ctx
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,6 +83,19 @@ def parse_args() -> argparse.Namespace:
         help="Overwrite existing cache files instead of skipping them.",
     )
     return parser.parse_args()
+
+
+def targets_for_group(name: str, output_dir: Path, scenario_slug: str | None = None):
+    fid = output_dir / f"{name}_fiducial.npz"
+    if scenario_slug is not None:
+        return [fid, output_dir / f"{name}_{scenario_slug}.npz"]
+    return [fid] + [output_dir / f"{name}_{slug}.npz" for slug in SCENARIO_SLUGS]
+
+
+def group_needs_work(name: str, output_dir: Path, scenario_slug: str | None = None, force: bool = False) -> bool:
+    if force:
+        return True
+    return not all(path.exists() for path in targets_for_group(name, output_dir, scenario_slug))
 
 
 def compute_group(
@@ -144,11 +161,40 @@ def compute_group(
 
 def main() -> None:
     args = parse_args()
-    ctx = load_scenarios()
+    groups = []
+    if args.group in ("noiseless", "both"):
+        groups.append("noiseless")
+    if args.group in ("noisy", "both"):
+        groups.append("noisy")
     repo_root = Path(__file__).resolve().parent
     output_dir = Path(args.output_dir) if args.output_dir else repo_root / "THESIS" / "cache" / "pt_results"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.group in ("noiseless", "both"):
+    run_noiseless = args.group in ("noiseless", "both") and group_needs_work(
+        "noiseless", output_dir, args.scenario, force=args.force
+    )
+    run_noisy = args.group in ("noisy", "both") and group_needs_work(
+        "noisy", output_dir, args.scenario, force=args.force
+    )
+
+    if args.group in ("noiseless", "both") and not run_noiseless:
+        for path in targets_for_group("noiseless", output_dir, args.scenario):
+            print(f"Skipping existing {path}")
+    if args.group in ("noisy", "both") and not run_noisy:
+        for path in targets_for_group("noisy", output_dir, args.scenario):
+            print(f"Skipping existing {path}")
+    if not run_noiseless and not run_noisy:
+        print("All requested PT cache targets already exist; nothing to do.")
+        return
+
+    groups = []
+    if run_noiseless:
+        groups.append("noiseless")
+    if run_noisy:
+        groups.append("noisy")
+    ctx = load_scenarios(groups)
+
+    if run_noiseless:
         compute_group(
             "noiseless",
             ctx["noiseless"],
@@ -157,7 +203,7 @@ def main() -> None:
             scenario_slug=args.scenario,
             force=args.force,
         )
-    if args.group in ("noisy", "both"):
+    if run_noisy:
         compute_group(
             "noisy",
             ctx["noisy"],

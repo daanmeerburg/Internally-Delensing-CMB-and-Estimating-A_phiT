@@ -26,7 +26,8 @@ export FC="$TOOLCHAIN_BIN_GCC/gfortran"
 export F77="$FC"
 export F90="$FC"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}"
+REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-/path/to/your/runtime-root}"
 export PLENS="${PLENS:-$RUNTIME_ROOT/PLENS}"
 export INPUT="${INPUT:-$RUNTIME_ROOT/INPUT}"
@@ -38,10 +39,11 @@ BIN_TYPE="${BIN_TYPE:-fullA_10}"
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/THESIS/cache/pt_results}"
 SCENARIO="${SCENARIO:-}"
 FORCE="${FORCE:-0}"
-SCENARIO_LIST="${SCENARIO_LIST:-mv_lensed,mv_input_kappa,mv_internal_qest,tt_internal_polqest}"
+SCENARIO_LIST="${SCENARIO_LIST:-mv_lensed:mv_input_kappa:mv_internal_qest:tt_internal_polqest}"
 
 if [[ -z "${SCENARIO}" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
-  IFS=',' read -r -a _scenarios <<< "${SCENARIO_LIST}"
+  _sc_list="${SCENARIO_LIST//,/:}"
+  IFS=':' read -r -a _scenarios <<< "${_sc_list}"
   if (( SLURM_ARRAY_TASK_ID < 0 || SLURM_ARRAY_TASK_ID >= ${#_scenarios[@]} )); then
     echo "SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} out of range for SCENARIO_LIST=${SCENARIO_LIST}" >&2
     exit 1

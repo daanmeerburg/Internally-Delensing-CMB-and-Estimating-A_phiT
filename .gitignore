@@ -15,6 +15,10 @@ input/*/mf_klm.fits
 THESIS/cache/
 THESIS/*.png
 THESIS/PLENS/
+pp-cache_*.out
+pp-cache_*.err
+pt-cache_*.out
+pt-cache_*.err
 
 # Runtime-generated build artifacts
 plancklens/**/__pycache__/

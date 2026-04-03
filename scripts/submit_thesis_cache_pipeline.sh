@@ -18,6 +18,8 @@ Options:
   --time-pt TIME           Walltime for PT jobs (default: 1-00:00:00)
   --mem-pp MEM             Memory for PP jobs (default: 12G)
   --mem-pt MEM             Memory for PT jobs (default: 8G)
+  --output-dir-pp PATH     PP cache output dir (default: <repo>/THESIS/cache/pp_results)
+  --output-dir-pt PATH     PT cache output dir (default: <repo>/THESIS/cache/pt_results)
   --dry-run                Print sbatch commands without submitting
   -h, --help               Show this help
 
@@ -38,6 +40,8 @@ TIME_PP="3-00:00:00"
 TIME_PT="1-00:00:00"
 MEM_PP="12G"
 MEM_PT="8G"
+OUTPUT_DIR_PP=""
+OUTPUT_DIR_PT=""
 DRY_RUN=0
 FAKE_JOB_ID=900000
 
@@ -52,6 +56,8 @@ while [[ $# -gt 0 ]]; do
     --time-pt) TIME_PT="$2"; shift 2 ;;
     --mem-pp) MEM_PP="$2"; shift 2 ;;
     --mem-pt) MEM_PT="$2"; shift 2 ;;
+    --output-dir-pp) OUTPUT_DIR_PP="$2"; shift 2 ;;
+    --output-dir-pt) OUTPUT_DIR_PT="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 2 ;;
@@ -92,12 +98,20 @@ submit_parsable() {
 
 PP_SLURM="${REPO_ROOT}/compute_pp_plot_data.slurm"
 PT_SLURM="${REPO_ROOT}/compute_pt_plot_data.slurm"
-SCENARIO_REST="mv_input_kappa,mv_internal_qest,tt_internal_polqest"
+SCENARIO_REST="mv_input_kappa:mv_internal_qest:tt_internal_polqest"
+if [[ -z "${OUTPUT_DIR_PP}" ]]; then
+  OUTPUT_DIR_PP="${REPO_ROOT}/THESIS/cache/pp_results"
+fi
+if [[ -z "${OUTPUT_DIR_PT}" ]]; then
+  OUTPUT_DIR_PT="${REPO_ROOT}/THESIS/cache/pt_results"
+fi
 
 echo "Repository root : ${REPO_ROOT}"
 echo "Runtime root    : ${RUNTIME_ROOT}"
 echo "Pipeline        : ${PIPELINE}"
 echo "Partition       : ${PARTITION}"
+echo "PP output dir   : ${OUTPUT_DIR_PP}"
+echo "PT output dir   : ${OUTPUT_DIR_PT}"
 echo "Dry-run         : ${DRY_RUN}"
 
 if [[ "$PIPELINE" == "pp" || "$PIPELINE" == "both" ]]; then
@@ -105,7 +119,7 @@ if [[ "$PIPELINE" == "pp" || "$PIPELINE" == "both" ]]; then
   echo "Submitting PP dependency chain..."
   submit_parsable sbatch --parsable \
     --partition "${PARTITION}" --time "${TIME_PP}" --mem "${MEM_PP}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=clpp_noiseless,SCENARIO=mv_lensed \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=clpp_noiseless,SCENARIO=mv_lensed \
     "${PP_SLURM}"
   pp_noiseless_seed="${LAST_JOB_ID}"
 
@@ -113,13 +127,13 @@ if [[ "$PIPELINE" == "pp" || "$PIPELINE" == "both" ]]; then
     --dependency=afterok:${pp_noiseless_seed} \
     --array=0-2 \
     --partition "${PARTITION}" --time "${TIME_PP}" --mem "${MEM_PP}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=clpp_noiseless,SCENARIO_LIST="${SCENARIO_REST}" \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=clpp_noiseless,SCENARIO_LIST="${SCENARIO_REST}" \
     "${PP_SLURM}"
   pp_noiseless_rest="${LAST_JOB_ID}"
 
   submit_parsable sbatch --parsable \
     --partition "${PARTITION}" --time "${TIME_PP}" --mem "${MEM_PP}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=clpp_noisy,SCENARIO=mv_lensed \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=clpp_noisy,SCENARIO=mv_lensed \
     "${PP_SLURM}"
   pp_noisy_seed="${LAST_JOB_ID}"
 
@@ -127,20 +141,20 @@ if [[ "$PIPELINE" == "pp" || "$PIPELINE" == "both" ]]; then
     --dependency=afterok:${pp_noisy_seed} \
     --array=0-2 \
     --partition "${PARTITION}" --time "${TIME_PP}" --mem "${MEM_PP}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=clpp_noisy,SCENARIO_LIST="${SCENARIO_REST}" \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=clpp_noisy,SCENARIO_LIST="${SCENARIO_REST}" \
     "${PP_SLURM}"
   pp_noisy_rest="${LAST_JOB_ID}"
 
   submit_parsable sbatch --parsable \
     --partition "${PARTITION}" --time 02:00:00 --mem 4G \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=validation \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=validation \
     "${PP_SLURM}"
   pp_validation="${LAST_JOB_ID}"
 
   submit_parsable sbatch --parsable \
     --dependency=afterok:${pp_noiseless_rest}:${pp_noisy_rest} \
     --partition "${PARTITION}" --time "${TIME_PP}" --mem "${MEM_PP}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",STAGE=wf_eff \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PP}",STAGE=wf_eff \
     "${PP_SLURM}"
   pp_wf_eff="${LAST_JOB_ID}"
 
@@ -158,7 +172,7 @@ if [[ "$PIPELINE" == "pt" || "$PIPELINE" == "both" ]]; then
   echo "Submitting PT dependency chain..."
   submit_parsable sbatch --parsable \
     --partition "${PARTITION}" --time "${TIME_PT}" --mem "${MEM_PT}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",GROUP=noiseless,SCENARIO=mv_lensed \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PT}",GROUP=noiseless,SCENARIO=mv_lensed \
     "${PT_SLURM}"
   pt_noiseless_seed="${LAST_JOB_ID}"
 
@@ -166,13 +180,13 @@ if [[ "$PIPELINE" == "pt" || "$PIPELINE" == "both" ]]; then
     --dependency=afterok:${pt_noiseless_seed} \
     --array=0-2 \
     --partition "${PARTITION}" --time "${TIME_PT}" --mem "${MEM_PT}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",GROUP=noiseless,SCENARIO_LIST="${SCENARIO_REST}" \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PT}",GROUP=noiseless,SCENARIO_LIST="${SCENARIO_REST}" \
     "${PT_SLURM}"
   pt_noiseless_rest="${LAST_JOB_ID}"
 
   submit_parsable sbatch --parsable \
     --partition "${PARTITION}" --time "${TIME_PT}" --mem "${MEM_PT}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",GROUP=noisy,SCENARIO=mv_lensed \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PT}",GROUP=noisy,SCENARIO=mv_lensed \
     "${PT_SLURM}"
   pt_noisy_seed="${LAST_JOB_ID}"
 
@@ -180,7 +194,7 @@ if [[ "$PIPELINE" == "pt" || "$PIPELINE" == "both" ]]; then
     --dependency=afterok:${pt_noisy_seed} \
     --array=0-2 \
     --partition "${PARTITION}" --time "${TIME_PT}" --mem "${MEM_PT}" \
-    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",GROUP=noisy,SCENARIO_LIST="${SCENARIO_REST}" \
+    --export=ALL,VENV_ACTIVATE="${VENV_ACTIVATE}",RUNTIME_ROOT="${RUNTIME_ROOT}",OUTPUT_DIR="${OUTPUT_DIR_PT}",GROUP=noisy,SCENARIO_LIST="${SCENARIO_REST}" \
     "${PT_SLURM}"
   pt_noisy_rest="${LAST_JOB_ID}"
 
