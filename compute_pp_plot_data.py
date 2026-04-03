@@ -17,36 +17,37 @@ import numpy as np
 SCENARIO_SLUGS = ("mv_lensed", "mv_input_kappa", "mv_internal_qest", "tt_internal_polqest")
 
 
-def load_scenarios():
-    import parfiles.noNoise.parfile as par_nn
-    import parfiles.noNoise.parfile_delensed as par_nn_del
-    import parfiles.noNoise.parfile_delensed_qest as par_nn_qest
-    import parfiles.noNoise.parfile_delensed_PolQEST as par_nn_polq
-    import parfiles.Noise.parfile as par_n
-    import parfiles.Noise.parfile_delensed as par_n_del
-    import parfiles.Noise.parfile_delensed_qest as par_n_qest
-    import parfiles.Noise.parfile_delensed_PolQEST as par_n_polq
+def load_scenarios(load_noiseless: bool, load_noisy: bool):
+    ctx = {}
+    if load_noiseless:
+        import parfiles.noNoise.parfile as par_nn
+        import parfiles.noNoise.parfile_delensed as par_nn_del
+        import parfiles.noNoise.parfile_delensed_qest as par_nn_qest
+        import parfiles.noNoise.parfile_delensed_PolQEST as par_nn_polq
 
-    noiseless = [
-        (par_nn, "MV: lensed", "p", "mv_lensed"),
-        (par_nn_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
-        (par_nn_qest, "MV: internally delensed with MV-QEST", "p", "mv_internal_qest"),
-        (par_nn_polq, "TT: internally delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
-    ]
-    noisy = [
-        (par_n, "MV: lensed", "p", "mv_lensed"),
-        (par_n_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
-        (par_n_qest, "MV: internally delensed with MV-QEST", "p", "mv_internal_qest"),
-        (par_n_polq, "TT: internally delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
-    ]
-    return {
-        "noiseless": noiseless,
-        "noisy": noisy,
-        "par_nn": par_nn,
-        "par_n": par_n,
-        "par_nn_polq": par_nn_polq,
-        "par_n_polq": par_n_polq,
-    }
+        ctx["noiseless"] = [
+            (par_nn, "MV: lensed", "p", "mv_lensed"),
+            (par_nn_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
+            (par_nn_qest, "MV: internally delensed with MV-QEST", "p", "mv_internal_qest"),
+            (par_nn_polq, "TT: internally delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
+        ]
+        ctx["par_nn"] = par_nn
+        ctx["par_nn_polq"] = par_nn_polq
+    if load_noisy:
+        import parfiles.Noise.parfile as par_n
+        import parfiles.Noise.parfile_delensed as par_n_del
+        import parfiles.Noise.parfile_delensed_qest as par_n_qest
+        import parfiles.Noise.parfile_delensed_PolQEST as par_n_polq
+
+        ctx["noisy"] = [
+            (par_n, "MV: lensed", "p", "mv_lensed"),
+            (par_n_del, r"MV: delensed with input $\kappa_{LM}$", "p", "mv_input_kappa"),
+            (par_n_qest, "MV: internally delensed with MV-QEST", "p", "mv_internal_qest"),
+            (par_n_polq, "TT: internally delensed with Pol-QEST", "ptt", "tt_internal_polqest"),
+        ]
+        ctx["par_n"] = par_n
+        ctx["par_n_polq"] = par_n_polq
+    return ctx
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,6 +77,30 @@ def parse_args() -> argparse.Namespace:
         help="Overwrite existing cache files instead of skipping them.",
     )
     return parser.parse_args()
+
+
+def validation_target(output_dir: Path) -> Path:
+    return output_dir / "validation_noiseless_agr2.npz"
+
+
+def clpp_targets(output_dir: Path, group: str, bin_type: str, scenario_slug: str | None = None):
+    fid = output_dir / f"{group}_clpp_fiducial_{bin_type}.npz"
+    if scenario_slug is not None:
+        return [fid, output_dir / f"{group}_clpp_{scenario_slug}_{bin_type}.npz"]
+    return [fid] + [output_dir / f"{group}_clpp_{slug}_{bin_type}.npz" for slug in SCENARIO_SLUGS]
+
+
+def wf_targets(output_dir: Path):
+    return [
+        output_dir / "noiseless_wf_vs_eff_fullA_10.npz",
+        output_dir / "noisy_wf_vs_eff_fullA_10.npz",
+    ]
+
+
+def needs_work(paths, force: bool) -> bool:
+    if force:
+        return True
+    return not all(path.exists() for path in paths)
 
 
 def save_validation(output_dir: Path, par_nn, force: bool = False) -> None:
@@ -170,7 +195,7 @@ def save_clpp_group(
         print(f"Wrote {target}")
 
 
-def save_efficiency_cases(output_dir: Path, par_nn, par_nn_polq, par_n, par_n_polq) -> None:
+def save_efficiency_cases(output_dir: Path, par_nn, par_nn_polq, par_n, par_n_polq, force: bool = False) -> None:
     from binner_sims import binner_sims
 
     cases = {
@@ -179,7 +204,7 @@ def save_efficiency_cases(output_dir: Path, par_nn, par_nn_polq, par_n, par_n_po
     }
     for name, (par_base, par_del) in cases.items():
         target = output_dir / f"{name}_wf_vs_eff_fullA_10.npz"
-        if target.exists():
+        if target.exists() and not force:
             print(f"Skipping existing {target}")
             continue
 
@@ -214,19 +239,48 @@ def save_efficiency_cases(output_dir: Path, par_nn, par_nn_polq, par_n, par_n_po
 
 def main() -> None:
     args = parse_args()
-    ctx = load_scenarios()
     repo_root = Path(__file__).resolve().parent
     output_dir = Path(args.output_dir) if args.output_dir else repo_root / "THESIS" / "cache" / "pp_results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.stage in ("all", "validation"):
+    run_validation = args.stage in ("all", "validation") and needs_work([validation_target(output_dir)], args.force)
+    run_clpp_noiseless = args.stage in ("all", "clpp_noiseless") and needs_work(
+        clpp_targets(output_dir, "noiseless", "fullA_20", args.scenario), args.force
+    )
+    run_clpp_noisy = args.stage in ("all", "clpp_noisy") and needs_work(
+        clpp_targets(output_dir, "noisy", "fullA_20", args.scenario), args.force
+    )
+    run_wf = args.stage in ("all", "wf_eff") and needs_work(wf_targets(output_dir), args.force)
+
+    if args.stage in ("all", "validation") and not run_validation:
+        print(f"Skipping existing {validation_target(output_dir)}")
+    if args.stage in ("all", "clpp_noiseless") and not run_clpp_noiseless:
+        for p in clpp_targets(output_dir, "noiseless", "fullA_20", args.scenario):
+            print(f"Skipping existing {p}")
+    if args.stage in ("all", "clpp_noisy") and not run_clpp_noisy:
+        for p in clpp_targets(output_dir, "noisy", "fullA_20", args.scenario):
+            print(f"Skipping existing {p}")
+    if args.stage in ("all", "wf_eff") and not run_wf:
+        for p in wf_targets(output_dir):
+            print(f"Skipping existing {p}")
+
+    if not (run_validation or run_clpp_noiseless or run_clpp_noisy or run_wf):
+        print("All requested PP cache targets already exist; nothing to do.")
+        return
+
+    ctx = load_scenarios(
+        load_noiseless=(run_validation or run_clpp_noiseless or run_wf),
+        load_noisy=(run_clpp_noisy or run_wf),
+    )
+
+    if run_validation:
         save_validation(output_dir, ctx["par_nn"], force=args.force)
-    if args.stage in ("all", "clpp_noiseless"):
+    if run_clpp_noiseless:
         save_clpp_group("noiseless", ctx["noiseless"], "fullA_20", output_dir, args.scenario, force=args.force)
-    if args.stage in ("all", "clpp_noisy"):
+    if run_clpp_noisy:
         save_clpp_group("noisy", ctx["noisy"], "fullA_20", output_dir, args.scenario, force=args.force)
-    if args.stage in ("all", "wf_eff"):
-        save_efficiency_cases(output_dir, ctx["par_nn"], ctx["par_nn_polq"], ctx["par_n"], ctx["par_n_polq"])
+    if run_wf:
+        save_efficiency_cases(output_dir, ctx["par_nn"], ctx["par_nn_polq"], ctx["par_n"], ctx["par_n_polq"], force=args.force)
 
 
 if __name__ == "__main__":
