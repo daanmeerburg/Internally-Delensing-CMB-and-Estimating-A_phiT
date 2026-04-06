@@ -235,13 +235,28 @@ class library:
 
         assert k in self.keys_fund, (k, self.keys_fund)
         fname = os.path.join(self.lib_dir, 'simMF_k1%s_%s.fits' % (k, ut.mchash(mc_sims)))
-        if not os.path.exists(fname):
+        recache_mf = False
+        if os.path.exists(fname):
+            try:
+                # Guard against stale or truncated cached MF files from earlier runs.
+                alm_cached = hp.read_alm(fname)
+                lmax_cached = hp.Alm.getlmax(len(alm_cached))
+                if lmax_cached < lmax:
+                    print("MF cache lmax mismatch, rebuilding %s (%s < %s)" % (fname, lmax_cached, lmax))
+                    recache_mf = True
+            except Exception as err:
+                print("MF cache unreadable, rebuilding %s (%s)" % (fname, err))
+                recache_mf = True
+
+        if (not os.path.exists(fname)) or recache_mf:
             this_mcs = np.unique(mc_sims)
             MF = np.zeros(hp.Alm.getsize(lmax), dtype=complex)
             if len(this_mcs) == 0: return MF
             for i, idx in ut.enumerate_progress(this_mcs, label='calculating %s MF' % k):
                 MF += self.get_sim_qlm(k, idx, lmax=lmax)
             MF /= len(this_mcs)
+            if recache_mf and os.path.exists(fname):
+                os.remove(fname)
             _write_alm(fname, MF)
             print("Cached ", fname)
         return ut.alm_copy(hp.read_alm(fname), lmax=lmax)
@@ -637,4 +652,3 @@ class lib_filt2map_sepTP(lib_filt2map):
                 return hp.alm2map_spin([Glm, Clm], self.nside, spin, lmax)
         else:
             return np.zeros(hp.nside2npix(self.nside), dtype=float), np.zeros(hp.nside2npix(self.nside), dtype=float)
-
