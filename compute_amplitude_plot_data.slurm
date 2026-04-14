@@ -30,12 +30,17 @@ export F90="$FC"
 REPO_ROOT="${REPO_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}"
 REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-/path/to/your/runtime-root}"
+REFERENCE_RUNTIME_ROOT="${REFERENCE_RUNTIME_ROOT:-}"
 export PLENS="${PLENS:-$RUNTIME_ROOT/PLENS}"
 export INPUT="${INPUT:-$RUNTIME_ROOT/INPUT}"
 export PARAMS="${PARAMS:-$REPO_ROOT/input}"
 export KFIELD="${KFIELD:-$RUNTIME_ROOT/KFIELD}"
+if [[ -n "${REFERENCE_RUNTIME_ROOT}" ]]; then
+  export DELENSING_REFERENCE_PLENS="${DELENSING_REFERENCE_PLENS:-$REFERENCE_RUNTIME_ROOT/PLENS}"
+fi
 
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/THESIS/cache/amplitude_results}"
+REFERENCE_CACHE_DIR="${REFERENCE_CACHE_DIR:-}"
 STAGE="${STAGE:-all}"
 FORCE="${FORCE:-0}"
 
@@ -46,6 +51,10 @@ ARGS=(
   --stage "${STAGE}"
   --output-dir "${OUTPUT_DIR}"
 )
+
+if [[ -n "${REFERENCE_CACHE_DIR}" ]]; then
+  ARGS+=(--reference-cache-dir "${REFERENCE_CACHE_DIR}")
+fi
 
 if [[ "${FORCE}" == "1" ]]; then
   ARGS+=(--force)

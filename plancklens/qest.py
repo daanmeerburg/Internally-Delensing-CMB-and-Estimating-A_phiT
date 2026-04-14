@@ -16,6 +16,27 @@ from plancklens import qresp
 
 _write_alm = lambda fn, alm : hp.write_alm(fn, alm, overwrite=True)
 
+
+def _get_reference_plens_path(lib_dir, fname):
+    """Return matching file path under a reference PLENS tree, if configured.
+
+    This is used to reuse simulation-derived QE products when the active runtime
+    only changes data-side inputs (for example PR4 data-only tests). We only
+    redirect cache reads; data products are still written to the active runtime.
+    """
+    ref_plens = os.environ.get("DELENSING_REFERENCE_PLENS")
+    active_plens = os.environ.get("PLENS")
+    if not ref_plens or not active_plens:
+        return None
+    try:
+        rel = os.path.relpath(fname, start=active_plens)
+    except ValueError:
+        return None
+    if rel.startswith(".."):
+        return None
+    ref_fname = os.path.join(ref_plens, rel)
+    return ref_fname if os.path.exists(ref_fname) else None
+
 def eval_qe(qe_key, lmax_ivf, cls_weight, get_alm, nside, lmax_qlm, verbose=True, get_alm2=None, transf=None):
     """Evaluates a quadratic estimator gradient and curl terms.
 
@@ -183,6 +204,11 @@ class library:
         assert k in self.keys_fund, (k, self.keys_fund)
         fname = os.path.join(self.lib_dir, 'sim_%s_%04d.fits'%(k, idx) if idx != -1 else 'dat_%s.fits'%k)
         print("qlm lib: retrieving %s"%fname)
+        if idx != -1 and not os.path.exists(fname):
+            ref_fname = _get_reference_plens_path(self.lib_dir, fname)
+            if ref_fname is not None:
+                print("qlm lib: using reference %s" % ref_fname)
+                return ut.alm_copy(hp.read_alm(ref_fname), lmax=lmax)
         if not os.path.exists(fname):
             if k in ['ptt', 'xtt']: self._build_sim_Tgclm(idx)
             elif k in ['p_p', 'x_p']: self._build_sim_Pgclm(idx)
@@ -236,6 +262,7 @@ class library:
         assert k in self.keys_fund, (k, self.keys_fund)
         fname = os.path.join(self.lib_dir, 'simMF_k1%s_%s.fits' % (k, ut.mchash(mc_sims)))
         recache_mf = False
+        ref_fname = None
         if os.path.exists(fname):
             try:
                 # Guard against stale or truncated cached MF files from earlier runs.
@@ -247,6 +274,18 @@ class library:
             except Exception as err:
                 print("MF cache unreadable, rebuilding %s (%s)" % (fname, err))
                 recache_mf = True
+        else:
+            ref_fname = _get_reference_plens_path(self.lib_dir, fname)
+            if ref_fname is not None:
+                try:
+                    alm_cached = hp.read_alm(ref_fname)
+                    lmax_cached = hp.Alm.getlmax(len(alm_cached))
+                    if lmax_cached >= lmax:
+                        print("MF cache: using reference %s" % ref_fname)
+                        return ut.alm_copy(alm_cached, lmax=lmax)
+                    print("Reference MF lmax mismatch, rebuilding %s (%s < %s)" % (ref_fname, lmax_cached, lmax))
+                except Exception as err:
+                    print("Reference MF unreadable, rebuilding %s (%s)" % (ref_fname, err))
 
         if (not os.path.exists(fname)) or recache_mf:
             this_mcs = np.unique(mc_sims)

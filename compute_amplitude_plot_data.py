@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--stage",
-        choices=("all", "hist", "kde_noisy", "nulltest"),
+        choices=("all", "hist", "fitmeta_noisy", "kde_noisy", "kde_noisy_dataonly", "nulltest"),
         default="all",
         help="Which amplitude cache stage to compute.",
     )
@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
         "--output-dir",
         default=None,
         help="Directory where cached .npz files will be written.",
+    )
+    p.add_argument(
+        "--reference-cache-dir",
+        default=None,
+        help="Optional directory to load existing amplitude caches/metadata from.",
     )
     p.add_argument("--force", action="store_true", help="Overwrite existing cache files.")
     return p.parse_args()
@@ -123,6 +128,38 @@ def compute_hist_data(noiseless, noisy, sim_idxs, bin_type, lmin=3, lmax_fit=100
     }
 
 
+def compute_fit_meta(scenarios, sim_idxs, bin_type, lmin=3, lmax_fit=100):
+    from binner_sims import ffp10_binner_phiT
+
+    lmax, c_fid, ls = get_common_fid(bin_type, lmin, lmax_fit)
+    fid_sq = c_fid[ls] ** 2
+
+    sigma = {}
+    w = {}
+    den = {}
+
+    for parfile, label, kphi in scenarios:
+        b = ffp10_binner_phiT(kphi, parfile, bin_type)
+        _, sig = b.get_cL_PHI_T_with_error(mc_sims=sim_idxs, binned=False, scaled=False)
+        sigma[label] = sig
+
+        seg = sig[ls].copy()
+        seg[seg == 0] = np.finfo(float).eps
+        w_arr = 1.0 / seg**2
+        w[label] = w_arr
+        den[label] = float(np.sum(fid_sq * w_arr))
+
+    return {
+        "labels": list(LABELS),
+        "lmax": int(lmax),
+        "ls": ls,
+        "c_fid": c_fid,
+        "w": w,
+        "den": den,
+        "bin_type": bin_type,
+    }
+
+
 def save_hist_npz(data, out_dir: Path):
     for group in ("noiseless", "noisy"):
         path = out_dir / f"{group}_amplitude_hist_agr2.npz"
@@ -143,6 +180,25 @@ def save_hist_npz(data, out_dir: Path):
             bin_type="agr2",
         )
         print(f"Wrote {path}")
+
+
+def save_fit_meta_npz(meta, out_dir: Path):
+    path = out_dir / "noisy_amplitude_fitmeta_agr2.npz"
+    np.savez(
+        path,
+        labels=np.array(meta["labels"], dtype=object),
+        ls=meta["ls"],
+        c_fid=meta["c_fid"],
+        lmax=int(meta["lmax"]),
+        w0=meta["w"][LABELS[0]],
+        w1=meta["w"][LABELS[1]],
+        w2=meta["w"][LABELS[2]],
+        den0=float(meta["den"][LABELS[0]]),
+        den1=float(meta["den"][LABELS[1]]),
+        den2=float(meta["den"][LABELS[2]]),
+        bin_type=meta["bin_type"],
+    )
+    print(f"Wrote {path}")
 
 
 def save_noisy_kde_npz(data, noisy, out_dir: Path):
@@ -171,6 +227,64 @@ def save_noisy_kde_npz(data, noisy, out_dir: Path):
         adata1=a_data[LABELS[1]],
         adata2=a_data[LABELS[2]],
         bin_type="agr2",
+    )
+    print(f"Wrote {path}")
+
+
+def load_fit_meta_npz(path: Path):
+    z = np.load(path, allow_pickle=True)
+    labels = [str(x) for x in z["labels"]]
+    return {
+        "labels": labels,
+        "ls": z["ls"],
+        "c_fid": z["c_fid"],
+        "lmax": int(z["lmax"]),
+        "w": {
+            labels[0]: z["w0"],
+            labels[1]: z["w1"],
+            labels[2]: z["w2"],
+        },
+        "den": {
+            labels[0]: float(z["den0"]),
+            labels[1]: float(z["den1"]),
+            labels[2]: float(z["den2"]),
+        },
+        "bin_type": str(z["bin_type"]),
+    }
+
+
+def compute_noisy_data_amplitudes(noisy, fit_meta):
+    from plancklens.utils import cli
+
+    lmax = int(fit_meta["lmax"])
+    ls = fit_meta["ls"]
+    c_fid = fit_meta["c_fid"]
+    a_data = {}
+
+    for parfile, label, kphi in noisy:
+        cl_data = parfile.qcls_pt.get_sim_qcl(kphi, -1, lmax=lmax).copy()
+        resp = cli(parfile.qresp_dd.get_response(kphi, "p")[: lmax + 1])
+        cl_data *= resp
+        w_arr = fit_meta["w"][label]
+        d = fit_meta["den"][label]
+        a_data[label] = float(np.sum(cl_data[ls] * c_fid[ls] * w_arr) / d)
+
+    return a_data
+
+
+def save_noisy_kde_from_hist_and_data(hist_path: Path, a_data, out_dir: Path):
+    hist = np.load(hist_path, allow_pickle=True)
+    path = out_dir / "noisy_amplitude_kde_agr2.npz"
+    np.savez(
+        path,
+        labels=hist["labels"],
+        a0=hist["a0"],
+        a1=hist["a1"],
+        a2=hist["a2"],
+        adata0=a_data[LABELS[0]],
+        adata1=a_data[LABELS[1]],
+        adata2=a_data[LABELS[2]],
+        bin_type=hist["bin_type"],
     )
     print(f"Wrote {path}")
 
@@ -235,10 +349,13 @@ def main() -> None:
     repo_root = Path(__file__).resolve().parent
     out_dir = Path(args.output_dir) if args.output_dir else repo_root / "THESIS" / "cache" / "amplitude_results"
     out_dir.mkdir(parents=True, exist_ok=True)
+    ref_dir = Path(args.reference_cache_dir) if args.reference_cache_dir else out_dir
 
     targets = {
         "hist": [out_dir / "noiseless_amplitude_hist_agr2.npz", out_dir / "noisy_amplitude_hist_agr2.npz"],
+        "fitmeta_noisy": [out_dir / "noisy_amplitude_fitmeta_agr2.npz"],
         "kde_noisy": [out_dir / "noisy_amplitude_kde_agr2.npz"],
+        "kde_noisy_dataonly": [out_dir / "noisy_amplitude_kde_agr2.npz"],
         "nulltest": [out_dir / "amplitude_nulltest_agr2.npz"],
     }
 
@@ -260,12 +377,39 @@ def main() -> None:
         for p in targets["hist"]:
             print(f"Skipping existing {p}")
 
+    if args.stage in ("all", "fitmeta_noisy") and need("fitmeta_noisy"):
+        meta = compute_fit_meta(noisy, sim_idxs, bin_type)
+        save_fit_meta_npz(meta, out_dir)
+    elif args.stage in ("all", "fitmeta_noisy"):
+        for p in targets["fitmeta_noisy"]:
+            print(f"Skipping existing {p}")
+
     if args.stage in ("all", "kde_noisy") and need("kde_noisy"):
         if data is None:
             data = compute_hist_data(noiseless, noisy, sim_idxs, bin_type)
         save_noisy_kde_npz(data, noisy, out_dir)
     elif args.stage in ("all", "kde_noisy"):
         for p in targets["kde_noisy"]:
+            print(f"Skipping existing {p}")
+
+    if args.stage == "kde_noisy_dataonly" and need("kde_noisy_dataonly"):
+        fitmeta_path = ref_dir / "noisy_amplitude_fitmeta_agr2.npz"
+        hist_path = ref_dir / "noisy_amplitude_hist_agr2.npz"
+        if not fitmeta_path.exists():
+            raise FileNotFoundError(
+                f"Missing fit metadata cache: {fitmeta_path}. "
+                "Run --stage fitmeta_noisy once in the reference cache directory first."
+            )
+        if not hist_path.exists():
+            raise FileNotFoundError(
+                f"Missing noisy histogram cache: {hist_path}. "
+                "Run --stage hist once in the reference cache directory first."
+            )
+        fit_meta = load_fit_meta_npz(fitmeta_path)
+        a_data = compute_noisy_data_amplitudes(noisy, fit_meta)
+        save_noisy_kde_from_hist_and_data(hist_path, a_data, out_dir)
+    elif args.stage == "kde_noisy_dataonly":
+        for p in targets["kde_noisy_dataonly"]:
             print(f"Skipping existing {p}")
 
     if args.stage in ("all", "nulltest") and need("nulltest"):
